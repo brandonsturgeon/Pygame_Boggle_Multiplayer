@@ -11,7 +11,7 @@ class Tile(pygame.sprite.Sprite):
     def __init__(self, pos, letter, font):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((100, 100))
-        self.color = (175, 175, 175)
+        self.color = (182, 192, 210)
         self.rect = pygame.Rect(pos, self.image.get_size())
         self.letter = letter
         self.letter_image = font.render(self.letter.upper(), 1, (255, 255, 255))
@@ -83,7 +83,7 @@ class Game():
                             if tile.rect.collidepoint((self.mouse_x, self.mouse_y)):
                                 if tile not in submit_word:
                                     submit_word.append(tile)
-                                    tile.color = (125, 125, 125)
+                                    tile.color = (132, 142, 160)
 
                     # New Game
                     if self.new_game_button_rect.collidepoint((self.mouse_x, self.mouse_y)):
@@ -96,7 +96,7 @@ class Game():
                 # Mouse is lifted up, check the word
                 if event.type == pygame.MOUSEBUTTONUP:
                     for tile in self.tiles:
-                        tile.color = (175, 175, 175)
+                        tile.color = (182, 192, 210)
                     self.check_word(submit_word)
                     submit_word = []
 
@@ -119,9 +119,9 @@ class Game():
         font = pygame.font.Font(None, 75)
         print "Generating Tiles..."
         letter_dict = {"q":1, "x":1}
-        y_val = 0
+        y_val = 10
         for y in range(5):
-            x_val = 0
+            x_val = 10
             for x in range(5):
 
                 # Limit 2 of each letter using dictionaries
