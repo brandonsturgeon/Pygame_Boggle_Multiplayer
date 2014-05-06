@@ -21,25 +21,26 @@ class Tile(pygame.sprite.Sprite):
     def update(self):
         # Fill and then blit the letter
         self.image.fill(self.color)
-        blit_x = (self.image.get_width() / 2) - (self.letter_image.get_width() /2)
-        blit_y = (self.image.get_height() /2) - (self.letter_image.get_height() /2)
+        blit_x = (self.image.get_width() / 2) - (self.letter_image.get_width() / 2)
+        blit_y = (self.image.get_height() / 2) - (self.letter_image.get_height() / 2)
         self.image.blit(self.letter_image, (blit_x, blit_y))
-
 
 
 class Game():
     def __init__(self):
         pygame.init()
-        self.CLOCK = pygame.time.Clock()
+        self.clock = pygame.time.Clock()
         self.game_window = pygame.display.set_mode((1000, 600))
         pygame.display.set_caption("Boggle")
         self.tile_container = pygame.Surface((600, 600))
         self.tile_container_rect = pygame.Rect((0, 0), self.tile_container.get_size())
         self.mouse_x = 0
         self.mouse_y = 0
+        self.mouse_pos = (0, 0)
         self.score = 0
         self.dictionary = open("2of12inf.txt")
-        self.dictionary = [x.strip().replace("%","") for x in self.dictionary]
+        self.dictionary = set([x.strip() for x in self.dictionary])
+        self.bound_box = pygame.Rect((0, 0), self.tile_container.get_size())
 
         # Lengthy surface creations
         self.word_container = pygame.Surface((400, 600))
@@ -48,10 +49,13 @@ class Game():
         self.new_game_button = pygame.Surface((100, 25))
         self.new_game_button.fill((0, 0, 255))
         self.new_game_text = self.word_font.render("New Game", 1, (255, 0, 0))
-        self.new_game_button.blit(self.new_game_text, ((self.new_game_button.get_width()/2)-(self.new_game_text.get_width()/2),
-                                                  (self.new_game_button.get_height()/2)-(self.new_game_text.get_height()/2)))
+        self.new_game_button.blit(self.new_game_text, ((self.new_game_button.get_width()/2) -
+                                                       (self.new_game_text.get_width()/2),
+                                                       (self.new_game_button.get_height()/2) -
+                                                       (self.new_game_text.get_height()/2)))
         self.new_game_button_rect = pygame.Rect((self.game_window.get_width() - self.new_game_button.get_width(),
-                                                 self.game_window.get_height() - self.new_game_button.get_height()), self.new_game_button.get_size())
+                                                 self.game_window.get_height() - self.new_game_button.get_height()),
+                                                self.new_game_button.get_size())
         self.words = []
 
         self.tiles = pygame.sprite.Group()
@@ -71,16 +75,22 @@ class Game():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     self.playing = False
-                    break
+                    return
 
                 if event.type == pygame.MOUSEMOTION:
                     self.mouse_x, self.mouse_y = event.pos
+                    self.mouse_pos = (self.mouse_x, self.mouse_y)
 
-                # Check for collisions and thne update the color of the Tiles
+                # Check for collisions and the update the color of the Tiles
                 if mousebutton[0] == 1:
-                    if self.tile_container_rect.collidepoint((self.mouse_x, self.mouse_y)):
+                    if self.tile_container_rect.collidepoint(self.mouse_pos):
                         for tile in self.tiles:
-                            if tile.rect.collidepoint((self.mouse_x, self.mouse_y)):
+                            if tile.rect.collidepoint(self.mouse_pos) and self.bound_box.collidepoint(self.mouse_pos):
+                                # Create bound_box to be 3x3 grid around the currently selected tile to prevent cheats
+                                self.bound_box = pygame.Rect((tile.rect.x - tile.image.get_width() - 20,
+                                                             tile.rect.y - tile.image.get_height() - 20),
+                                                            (tile.image.get_width()*3 + (20*2),
+                                                             tile.image.get_height()*3 + (20*2)))
                                 if tile not in submit_word:
                                     submit_word.append(tile)
                                     tile.color = (132, 142, 160)
@@ -95,11 +105,11 @@ class Game():
 
                 # Mouse is lifted up, check the word
                 if event.type == pygame.MOUSEBUTTONUP:
+                    self.bound_box = pygame.Rect((0, 0), self.tile_container.get_size())
                     for tile in self.tiles:
                         tile.color = (182, 192, 210)
                     self.check_word(submit_word)
                     submit_word = []
-
 
             # Blitting
             self.tile_container.fill((69, 82, 104))
@@ -112,21 +122,23 @@ class Game():
             self.game_window.blit(self.word_container, (600, 0))
             self.game_window.blit(self.new_game_button, (self.new_game_button_rect.x, self.new_game_button_rect.y))
             pygame.display.flip()
-            self.CLOCK.tick(60)
+            self.clock.tick(60)
 
     # Generates all of the tiles
     def gen_tiles(self):
         font = pygame.font.Font(None, 75)
+        r_letter = ""
         print "Generating Tiles..."
-        letter_dict = {"q":1, "x":1}
+        letter_dict = {"q": 1, "x": 1, "a": -1, "e": -1, "i": -1, "o": -1, "u": -1}
         y_val = 10
         for y in range(5):
             x_val = 10
             for x in range(5):
 
-                # Limit 2 of each letter using dictionaries
+                # Limit 2 of each consonant, uses dictionaries.
                 while True:
-                    r_letter = random.choice(string.lowercase[:25])
+                    r_letter = random.choice(('eeeeeeeeeeeetttttttttaaaaaaaaooooooooiiiiiiinnnnnnn'
+                                              'ssssssrrrrrrhhhhhhddddllluuucccmmmffyywwggppbvkxqjz'))
 
                     if r_letter not in letter_dict.keys():
                         letter_dict[r_letter] = 1
@@ -156,7 +168,6 @@ class Game():
     def display_words(self):
         y_value = 10
         x_value = 5
-
 
         if len(self.words) > 0:
             maxword = max(self.words, key=len)
