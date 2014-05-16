@@ -129,7 +129,10 @@ class Game():
         font = pygame.font.Font(None, 75)
         r_letter = ""
         print "Generating Tiles..."
-        letter_dict = {"q": 1, "x": 1, "a": -1, "e": -1, "i": -1, "o": -1, "u": -1}
+
+        # Keeps track of all the letters we've used, puts a limit of 2 on each letter
+        # Note that some consonants start at 1, so that we're even less likely to generate it
+        letter_dict = {"q": 1, "x": 1, "a": -2, "e": -2, "i": -2, "o": -2, "u": -2}
         y_val = 10
         for y in range(5):
             x_val = 10
@@ -137,16 +140,20 @@ class Game():
 
                 # Limit 2 of each consonant, uses dictionaries.
                 while True:
+                    # Approximate letter distribution based on a study of 500,000 English words
                     r_letter = random.choice(('eeeeeeeeeeeetttttttttaaaaaaaaooooooooiiiiiiinnnnnnn'
                                               'ssssssrrrrrrhhhhhhddddllluuucccmmmffyywwggppbvkxqjz'))
 
+                    # If we haven't used the letter before, add it to the dictionary
                     if r_letter not in letter_dict.keys():
                         letter_dict[r_letter] = 1
                         break
+                    # If we have, add 1
                     elif letter_dict[r_letter] < 2:
                         letter_dict[r_letter] += 1
                         break
-                    
+
+                # Create the Tile
                 self.tiles.add(Tile((x_val, y_val), r_letter, font))
                 x_val += 120
             y_val += 120
@@ -169,6 +176,7 @@ class Game():
         y_value = 10
         x_value = 5
 
+        # Gets the biggest words so we can highlight it
         if len(self.words) > 0:
             maxword = max(self.words, key=len)
         else:
