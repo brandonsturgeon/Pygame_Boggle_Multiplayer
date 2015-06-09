@@ -5,6 +5,9 @@ import random
 import string
 import pygame
 
+from PodSixNet.Connection import ConnectionListener, connection
+from time import sleep
+
 
 # Creates the tiles that display letters and respond to being hovered/clicked
 class Tile(pygame.sprite.Sprite):
@@ -31,7 +34,7 @@ class Tile(pygame.sprite.Sprite):
         self.rect = pygame.Rect(((self.pos[0]*120)+10, (self.pos[1]*120)+10), self.image.get_size())
 
 
-class Game():
+class Game(ConnectionListener):
     def __init__(self):
         pygame.init()
         self.clock = pygame.time.Clock()
@@ -72,11 +75,15 @@ class Game():
                                                self.rotate_button.get_size())
         self.words = []
 
+        self.playing = False
         self.tiles = pygame.sprite.Group()
-        self.playing = True
+        self.Connect()
 
-        self.gen_tiles()
-        self.game_loop()
+        # Waiting for the game start
+        while not self.playing:
+            self.Pump()
+            connection.Pump()
+            sleep(0.01)
 
     # Main game loop
     def game_loop(self):
@@ -110,12 +117,12 @@ class Game():
                                     tile.color = (132, 142, 160)
 
                     # New Game
-                    if self.new_game_button_rect.collidepoint((self.mouse_x, self.mouse_y)):
-                        self.score = 0
-                        self.words = []
-                        self.tiles = pygame.sprite.Group()
-                        self.gen_tiles()
-                        self.game_loop()
+                    #if self.new_game_button_rect.collidepoint((self.mouse_x, self.mouse_y)):
+                        #self.score = 0
+                        #self.words = []
+                        #self.tiles = pygame.sprite.Group()
+                        #self.gen_tiles()
+                        #self.game_loop()
 
                     # Rotate board clockwise
                     elif self.rotate_button_rect.collidepoint((self.mouse_x, self.mouse_y)):
@@ -142,43 +149,11 @@ class Game():
             self.game_window.blit(self.new_game_button, (self.new_game_button_rect.x, self.new_game_button_rect.y))
             self.game_window.blit(self.rotate_button, (self.rotate_button_rect.x, self.rotate_button_rect.y))
             pygame.display.flip()
+
+            connection.Pump()
+            self.Pump()
+
             self.clock.tick(60)
-
-    # Generates all of the tiles
-    def gen_tiles(self):
-        font = pygame.font.Font(None, 75)
-        r_letter = ""
-        print "Generating Tiles..."
-
-        # Keeps track of all the letters we've used, puts a limit of 2 on each letter
-        # Note that some consonants start at 1, so that we're even less likely to generate it
-        letter_dict = {"q": 1, "x": 1, "a": -2, "e": -2, "i": -2, "o": -2, "u": -2}
-        y_val = 0
-        for y in range(5):
-            x_val = 0
-            for x in range(5):
-
-                # Limit 2 of each consonant, uses dictionaries.
-                while True:
-                    # Approximate letter distribution based on a study of 500,000 English words
-                    r_letter = random.choice(('eeeeeeeeeeeetttttttttaaaaaaaaooooooooiiiiiiinnnnnnn'
-                                              'ssssssrrrrrrhhhhhhddddllluuucccmmmffyywwggppbvkxqjz'))
-
-                    # If we haven't used the letter before, add it to the dictionary
-                    if r_letter not in letter_dict.keys():
-                        letter_dict[r_letter] = 1
-                        break
-                    # If we have, add 1
-                    elif letter_dict[r_letter] < 2:
-                        letter_dict[r_letter] += 1
-                        break
-
-                # Create the Tile
-                self.tiles.add(Tile((x_val, y_val), r_letter, font))
-                x_val += 1
-            y_val += 1
-
-        print "Generation Complete!"
 
     # Checks to see if the word is valid
     def check_word(self, tile_list):
@@ -190,6 +165,20 @@ class Game():
             if word not in self.words:
                 self.words.append(word)
                 self.score += len(word)
+
+    #Called when a match is found, the game begins
+    def Network_startgame(self, data):
+        font = pygame.font.Font(None, 75)
+        self.playing = True
+        self.player_id = data["player"]
+        self.game_id = data["gameid"]
+
+        # Generate the board based on the metadata recieve by the server
+        for v in data["tiles"]:
+            self.tiles.add(Tile(v[0], v[1], font))
+        self.game_loop()
+
+
 
     # Displays all of the valid words entered
     def display_words(self):
